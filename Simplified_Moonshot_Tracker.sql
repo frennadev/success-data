@@ -153,45 +153,4 @@ FROM moonshot_calculations
 WHERE return_percentage >= 1000  -- Only show 1000%+ returns (10x+)
   AND total_invested_usd >= 50    -- Minimum meaningful investment
 ORDER BY return_percentage DESC, profit_usd DESC
-LIMIT 1000;
-
--- =================================================================================
--- SUPPLEMENTARY QUERY: Wallet Summary for Serial Moonshotters
--- =================================================================================
-
-/*
-WITH moonshot_summary AS (
-  SELECT 
-    trader_wallet,
-    COUNT(*) as moonshot_count,
-    SUM(total_invested_usd) as total_invested,
-    SUM(total_pnl_usd) as total_profit,
-    AVG(return_percentage) as avg_return,
-    MAX(return_percentage) as best_return,
-    MIN(first_trade_time) as first_moonshot,
-    MAX(last_trade_time) as latest_moonshot
-  FROM moonshot_calculations
-  WHERE return_percentage >= 1000
-  GROUP BY trader_wallet
-)
-
-SELECT 
-  trader_wallet,
-  moonshot_count,
-  ROUND(total_invested, 2) as total_invested_usd,
-  ROUND(total_profit, 2) as total_profit_usd,
-  ROUND(avg_return, 2) as avg_return_pct,
-  ROUND(best_return, 2) as best_return_pct,
-  CASE 
-    WHEN moonshot_count >= 10 THEN 'Serial Moonshotter (10+)'
-    WHEN moonshot_count >= 5 THEN 'Frequent Moonshotter (5-9)'
-    WHEN moonshot_count >= 3 THEN 'Regular Moonshotter (3-4)'
-    WHEN moonshot_count >= 2 THEN 'Occasional Moonshotter (2)'
-    ELSE 'One-Hit Wonder (1)'
-  END as trader_type,
-  first_moonshot,
-  latest_moonshot
-FROM moonshot_summary
-WHERE moonshot_count >= 2  -- Focus on repeat performers
-ORDER BY total_profit DESC;
-*/
+LIMIT 1000
