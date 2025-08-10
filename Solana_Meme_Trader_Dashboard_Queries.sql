@@ -6,28 +6,26 @@
 -- =================================================================================
 
 WITH launchpad_tokens AS (
-  SELECT 
-    token_mint_address,
-    block_time as launch_time,
-    creator_wallet,
-    initial_supply,
-    launchpad_type,
+  SELECT DISTINCT
+    t.account_mint as token_mint_address,
+    t.block_time as launch_time,
+    t.account_owner as creator_wallet,
     CASE 
-      WHEN account = '6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P' THEN 'pump.fun'
-      WHEN account = '3xxDCjN8s6MgNHwdRD6Cgg3kHunJVu2SXBpkDbF9rJ9' THEN 'letsbonk'  
-      WHEN account = '7YttLkHDoNj9wyDur5pM1ejNaAvT9X4eqaYcHQqtj2G5' THEN 'bags'
+      WHEN t.account_program = '6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P' THEN 'pump.fun'
+      WHEN t.account_program = '3xxDCjN8s6MgNHwdRD6Cgg3kHunJVu2SXBpkDbF9rJ9' THEN 'letsbonk'  
+      WHEN t.account_program = '7YttLkHDoNj9wyDur5pM1ejNaAvT9X4eqaYcHQqtj2G5' THEN 'bags'
+      WHEN i.executing_account = '6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P' THEN 'pump.fun'
       ELSE 'other'
     END as launchpad_name
-  FROM solana.account_activity 
+  FROM solana.account_activity t
+  LEFT JOIN solana.instruction_calls i ON t.tx_id = i.tx_id AND t.block_time = i.block_time
   WHERE 
-    -- Pump.fun program ID
-    (account = '6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P' 
-    -- LetsBonk program ID  
-    OR account = '3xxDCjN8s6MgNHwdRD6Cgg3kHunJVu2SXBpkDbF9rJ9'
-    -- Bags program ID
-    OR account = '7YttLkHDoNj9wyDur5pM1ejNaAvT9X4eqaYcHQqtj2G5')
-    AND instruction_name = 'create_token'
-    AND block_time >= CURRENT_DATE - INTERVAL '90' DAY
+    (t.account_program = '6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P' 
+    OR t.account_program = '3xxDCjN8s6MgNHwdRD6Cgg3kHunJVu2SXBpkDbF9rJ9'
+    OR t.account_program = '7YttLkHDoNj9wyDur5pM1ejNaAvT9X4eqaYcHQqtj2G5'
+    OR i.executing_account = '6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P')
+    AND t.block_time >= CURRENT_DATE - INTERVAL '90' DAY
+    AND t.account_mint IS NOT NULL
 ),
 
 -- =================================================================================
@@ -37,21 +35,21 @@ WITH launchpad_tokens AS (
 token_trades AS (
   SELECT 
     t.token_mint_address,
-    tr.trader_wallet,
+    tr.trader as trader_wallet,
     tr.block_time,
-    tr.instruction_name,
-    tr.token_amount,
-    tr.sol_amount,
-    tr.price_per_token,
+    CASE WHEN tr.token_amount > 0 THEN 'buy' ELSE 'sell' END as instruction_name,
+    ABS(tr.token_amount) as token_amount,
+    ABS(tr.usd_amount) as sol_amount,
+    tr.token_price as price_per_token,
     tr.tx_id,
-    ROW_NUMBER() OVER (PARTITION BY tr.trader_wallet, t.token_mint_address ORDER BY tr.block_time) as trade_sequence
+    ROW_NUMBER() OVER (PARTITION BY tr.trader, t.token_mint_address ORDER BY tr.block_time) as trade_sequence
   FROM launchpad_tokens t
-  JOIN solana.dex.trades tr ON t.token_mint_address = tr.token_mint_address
+  JOIN dex.trades tr ON t.token_mint_address = tr.token_address
   WHERE 
     tr.block_time >= t.launch_time
     AND tr.block_time <= CURRENT_TIMESTAMP
-    AND tr.token_amount > 0
-    AND tr.sol_amount > 0
+    AND tr.token_amount != 0
+    AND tr.blockchain = 'solana'
 ),
 
 -- =================================================================================  
