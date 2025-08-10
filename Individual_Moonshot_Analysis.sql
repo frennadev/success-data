@@ -89,8 +89,8 @@ moonshot_calculations AS (
     END as token_return_pct,
     
     -- Time metrics
-    EXTRACT(EPOCH FROM (last_trade - first_trade)) / 3600 as hold_duration_hours,
-    EXTRACT(EPOCH FROM (first_trade - launch_time)) / 3600 as entry_delay_hours
+    DATE_DIFF('hour', first_trade, last_trade) as hold_duration_hours,
+    DATE_DIFF('hour', launch_time, first_trade) as entry_delay_hours
     
   FROM individual_token_performance
 )

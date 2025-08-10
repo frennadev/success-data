@@ -21,9 +21,9 @@ WITH wallet_summary AS (
     COUNT(CASE WHEN return_percentage > 0 THEN 1 END) * 100.0 / COUNT(*) as win_rate_pct,
     COUNT(CASE WHEN return_percentage >= 1000 THEN 1 END) as moonshot_count,
     
-    -- Timing analysis
-    AVG(trade_duration_hours) as avg_hold_time_hours,
-    AVG(hours_after_launch) as avg_entry_timing_hours
+    -- Timing analysis  
+    AVG(DATE_DIFF('hour', first_trade_time, last_trade_time)) as avg_hold_time_hours,
+    AVG(DATE_DIFF('hour', launch_time, first_trade_time)) as avg_entry_timing_hours
     
   FROM (
     -- Reference to previous main query results

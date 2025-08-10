@@ -120,7 +120,7 @@ high_performer_wallets AS (
     END as return_percentage,
     
     -- Trade duration
-    EXTRACT(EPOCH FROM (last_trade_time - first_trade_time)) / 3600 as trade_duration_hours
+    DATE_DIFF('hour', first_trade_time, last_trade_time) as trade_duration_hours
     
   FROM wallet_token_pnl
   WHERE total_sol_invested >= 0.1  -- Minimum investment threshold
@@ -155,7 +155,7 @@ SELECT
   END as moonshot_tier,
   
   -- Time to profit analysis
-  EXTRACT(EPOCH FROM (first_trade_time - launch_time)) / 3600 as hours_after_launch,
+  DATE_DIFF('hour', launch_time, first_trade_time) as hours_after_launch,
   
   -- Individual trade context
   CONCAT('https://solscan.io/account/', trader_wallet) as wallet_link,
